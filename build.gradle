@@ -1,0 +1,85 @@
+plugins {
+	id 'java-library'
+}
+
+repositories {
+	mavenLocal()
+	mavenCentral()
+
+	// Bukkit, Spigot-API
+	maven { url 'https://hub.spigotmc.org/nexus/content/groups/public/' }
+}
+
+dependencies {
+	compileOnly 'org.spigotmc:spigot-api:1.16.5-R0.1-SNAPSHOT'
+}
+
+configurations {
+	implementation {
+		// Removed from Bukkit in newer versions:
+		exclude group: 'commons-lang', module: 'commons-lang'
+	}
+}
+
+ext.getGitHash = { ->
+	def stdout = new ByteArrayOutputStream()
+	def result = exec {
+		commandLine 'git', 'rev-parse', '--short', 'HEAD'
+		ignoreExitValue = true
+		standardOutput = stdout
+	}
+	if (result.getExitValue() != 0) return 'unknown'
+	return stdout.toString().trim()
+}
+
+project.ext.artifactId = project.name
+// We embed the git hash into jar files, and also use it for the plugin version of snapshot builds.
+ext.buildVersion = version + '+' + getGitHash()
+ext.isSnapshot = version.contains('-SNAPSHOT')
+ext.pluginVersion = isSnapshot ? buildVersion : version
+
+println 'Project version: ' + version
+println 'Build version: ' + buildVersion
+println 'Plugin version: ' + pluginVersion
+println 'Plugin name: ' + pluginName
+println 'Artifact id: ' + project.artifactId
+
+processResources {
+	inputs.property 'pluginName', pluginName
+	inputs.property 'pluginVersion', pluginVersion
+
+	from rootProject.file('LICENSE')
+	from project.sourceSets.main.resources.srcDirs
+	// TODO Some plugins might add resource directories twice.
+	// See https://github.com/gradle/gradle/issues/17236
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+	filesMatching('plugin.yml') {
+		expand([
+			'pluginName': pluginName,
+			'pluginVersion': pluginVersion
+		])
+	}
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_1_8
+}
+
+compileJava {
+	options.encoding = 'UTF-8'
+	options.compilerArgs += ['-Xmaxerrs', '10000', '-Xmaxwarns', '10000']
+}
+
+jar {
+	inputs.property 'group', project.group
+	inputs.property 'artifactId', project.artifactId
+	inputs.property 'buildVersion', project.buildVersion
+
+	archiveBaseName = project.artifactId
+	manifest {
+		attributes 'Implementation-Title': "${project.group}:${project.artifactId}",
+					'Implementation-Version': project.buildVersion
+	}
+}
+

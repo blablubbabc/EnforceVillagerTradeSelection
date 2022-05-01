@@ -1,0 +1,12 @@
+name: '${pluginName}'
+version: '${pluginVersion}'
+description: Requires players to explicitly select villager trades.
+authors: [blablubbabc]
+
+main: de.blablubbabc.enforceVillagerTradeSelection.EnforceVillagerTradeSelectionPlugin
+api-version: '1.16'
+
+permissions:
+  enforceVillagerTradeSelection.bypass:
+    description: Bypasses the restriction of having to explicitly select villager trades.
+    default: false
